@@ -13,9 +13,11 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserProducer userProducer;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, UserProducer userProducer) {
         this.userRepository = userRepository;
+        this.userProducer = userProducer;
     }
 
     // Method to create a new user
@@ -31,6 +33,9 @@ public class UserService {
 
         // Save the user to the database
         User savedUser = userRepository.save(user);
+
+        // Send the user to the Kafka topic
+        userProducer.send(savedUser);
 
         // Return the saved user as a response DTO
         return new UserResponseDTO(savedUser.getId(), savedUser.getName(), savedUser.getEmail());
@@ -49,5 +54,25 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return new UserResponseDTO(user.getId(), user.getName(), user.getEmail());
+    }
+
+    // Method to update a user
+    public UserResponseDTO updateUser(Long id, UserRequestDTO userRequestDTO) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Update the user entity with new values
+        if (userRequestDTO.getName() != null) {
+            user.setName(userRequestDTO.getName());
+        }
+        if (userRequestDTO.getEmail() != null) {
+            user.setEmail(userRequestDTO.getEmail());
+        }
+
+        // Save the updated user to the database
+        User updatedUser = userRepository.save(user);
+
+        // Return the updated user as a response DTO
+        return new UserResponseDTO(updatedUser.getId(), updatedUser.getName(), updatedUser.getEmail());
     }
 }
